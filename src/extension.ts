@@ -7,8 +7,10 @@ import { initializeGitApi } from "./git";
 import { registerLiveShareModule } from "./liveShare";
 import { registerPlayerModule } from "./player";
 import { registerRecorderModule } from "./recorder";
-import { promptForTour } from "./store/actions";
+import { selectTour, startCodeTour } from "./store/actions";
 import { discoverTours } from "./store/provider";
+import { store } from "./store";
+import { getWorkspaceKey } from "./utils";
 
 export async function activate(context: vscode.ExtensionContext) {
   registerPlayerModule(context);
@@ -17,7 +19,17 @@ export async function activate(context: vscode.ExtensionContext) {
 
   if (vscode.workspace.workspaceFolders) {
     await discoverTours();
-    promptForTour(context.globalState);
+
+    const workspaceRoot = getWorkspaceKey();
+    const primaryTour =
+      store.tours.find(tour => tour.isPrimary) ||
+      store.tours.find(tour => tour.title.match(/^#?1\s+-/));
+
+    if (primaryTour) {
+      startCodeTour(primaryTour, 0, workspaceRoot, false, undefined, store.tours);
+    } else {
+      selectTour(store.tours, workspaceRoot);
+    }
 
     initializeGitApi();
   }
